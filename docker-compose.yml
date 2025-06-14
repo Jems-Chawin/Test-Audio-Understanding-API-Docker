@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # GPU version (for your H100 setup)
+  whisper-api-gpu:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    volumes:
+      # Mount your model directory
+      - ./Three_models:/app/Three_models:ro
+      # Mount results directory to persist output
+      - ./load_test_results:/app/load_test_results
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CUDA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    profiles:
+      - gpu
+      - loadtest-gpu
+
+  # CPU version (fallback option)  
+  whisper-api-cpu:
+    build: 
+      context: .
+      dockerfile: Dockerfile.cpu
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./Three_models:/app/Three_models:ro
+      - ./load_test_results:/app/load_test_results
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+    profiles:
+      - cpu
+      - loadtest-cpu
+
+  # Loadtest service (Locust) - Simplified
+  loadtest:
+    build:
+      context: .
+      dockerfile: Dockerfile.loadtest
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./load_test_results:/app/load_test_results
+      - ./data_handmade:/app/data_handmade:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - whisper-api-gpu
+    profiles:
+      - loadtest-gpu
+    restart: "no"
+
+  # Loadtest for CPU version (Locust) - Simplified
+  loadtest-cpu:
+    build:
+      context: .
+      dockerfile: Dockerfile.loadtest
+    ports:
+      - "9001:9000"
+    volumes:
+      - ./load_test_results:/app/load_test_results
+      - ./data_handmade:/app/data_handmade:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - whisper-api-cpu
+    profiles:
+      - loadtest-cpu
+    restart: "no"

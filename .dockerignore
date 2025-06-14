@@ -1,0 +1,17 @@
+# Exclude everything except the essential files
+*
+
+# API files
+!api_multimodal.py
+!requirements_api.txt
+!Three_models/
+!Three_models/**
+
+# Loadtest files
+!loadtest.py
+!requirements_loadtest.txt
+!processed_handmade.csv
+!data_handmade/
+!data_handmade/**
+!utils/
+!utils/**

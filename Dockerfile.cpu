@@ -1,0 +1,42 @@
+# CPU-only version - smaller and faster to build
+FROM python:3.10-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    wget \
+    curl \
+    libsndfile1 \
+    ffmpeg \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements first (use your existing requirements_api.txt)
+COPY requirements_api.txt requirements.txt
+
+# Install CPU-only PyTorch first (smaller download)
+RUN pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+# Install other Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy only necessary files
+COPY api_multimodal.py .
+COPY requirements_api.txt requirements.txt
+
+# Create necessary directories
+RUN mkdir -p load_test_results
+RUN mkdir -p Three_models
+
+# Expose the port
+EXPOSE 4000
+
+# Command to run the application
+CMD ["python", "api_multimodal.py"]

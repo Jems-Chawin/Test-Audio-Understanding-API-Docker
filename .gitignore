@@ -1,0 +1,4 @@
+Three_models/
+__pycache__/
+**/__pycache__/
+*.pyc
